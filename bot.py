@@ -1,128 +1,87 @@
 import os
+import threading
 import discord
 from discord.ext import commands
 import yt_dlp
-import asyncio
+import flask
 import imageio_ffmpeg
-from keep_alive import keep_alive
 
+# إعداد تطبيق فلاسك عشان يظل البوت شغال 24 ساعة على رندر
+app = FlaskAppWrapper = flask.Flask(__name__)
+
+@app.route('/')
+def home():
+    return "L7N Bot is alive and running!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+# إعدادات ديسكورد بوت
 intents = discord.Intents.default()
 intents.message_content = True
-intents.voice_states = True
-
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+# تحديد مسار ffmpeg المضمن تلقائياً لتجنب مشاكل رندر
+FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
 
-# إعدادات مخصصة لضمان الاستقرار وتجاوز الحظر
-ytdl_format_options = {
+YDL_OPTIONS = {
     'format': 'bestaudio/best',
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0',
-    'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
+    'noplaylist': 'True',
 }
 
-ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
-
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-        self.data = data
-        self.title = data.get('title', 'مقطع صوتي')
-        self.url = data.get('url', '')
-
-    @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        if 'entries' in data:
-            data = data['entries'][0]
-        
-        filename = data.get('url')
-        
-        # خيارات خفيفة ومستقرة تماماً للـ ffmpeg لتجنب خطأ الانهيار -11
-        ffmpeg_options = {
-            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-            'options': '-vn'
-        }
-        
-        return cls(discord.FFmpegPCMAudio(filename, executable=ffmpeg_path, **ffmpeg_options), data=data)
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn',
+}
 
 @bot.event
 async def on_ready():
-    print(f'تم تسجيل الدخول بنجاح باسم: {bot.user.name}')
+    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
+    print('------')
 
-@bot.command(name="come")
-async def come_channel(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        if ctx.voice_client:
-            await ctx.voice_client.move_to(channel)
-        else:
-            await channel.connect()
-        await ctx.send("حياك الله، تم الدخول للقناة الصوتية! 🎙")
-    else:
-        await ctx.send("يا أبو محمد، لازم تكون داخل قناة صوتية أولاً!")
-
-@bot.command(name="ش")
-async def play_audio(ctx, *, query=None):
-    if not query:
-        await ctx.send("يا أبو محمد، اكتب اسم الأغنية أو حط الرابط بعد الأمر (مثال: `!ش اسم الأغنية`)")
+@bot.command(name='play', help='يشغل الصوت من الرابط')
+async def play(ctx, *, url):
+    if not ctx.author.voice:
+        await ctx.send("يا أبو محمد لازم تدخل روم صوتي أول! 🎙️")
         return
 
-    if not ctx.voice_client:
-        if ctx.author.voice:
-            await ctx.author.voice.channel.connect()
-        else:
-            await ctx.send("يا أبو محمد، لازم تدخل قناة صوتية أولاً!")
-            return
-
-    if ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
+    channel = ctx.author.voice.channel
+    
+    if ctx.voice_client is not None:
+        await ctx.voice_client.move_to(channel)
+    else:
+        await channel.connect()
 
     async with ctx.typing():
         try:
-            player = await YTDLSource.from_url(query, loop=bot.loop, stream=True)
-            ctx.voice_client.play(player, after=lambda e: print(f'خطأ في التشغيل: {e}') if e else None)
-            await ctx.send(f"جار الآن تشغيل: **{player.title}** 🎶")
+            with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+                url2 = info['url']
+            
+            # استخدام المسار الصحيح المضمن لـ ffmpeg
+            source = discord.FFmpegPCMAudio(url2, executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+            
+            ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+            await ctx.send(f'🎵 جاري تشغيل: **{info.get("title", "الصوت")}**')
         except Exception as e:
-            await ctx.send(f"صار خطأ أثناء جلب الرابط أو التشغيل: {e}")
+            await ctx.send(f'صار فيه خطأ أثناء تشغيل المقطع: `{e}`')
 
-@bot.command(name="وقف")
-async def pause_audio(ctx):
-    if ctx.voice_client and ctx.voice_client.is_playing():
-        ctx.voice_client.pause()
-        await ctx.send("تم إيقاف التشغيل مؤقتاً ⏸")
-    else:
-        await ctx.send("مافي شي شغال حالياً عشان أوقفه.")
-
-@bot.command(name="كمل")
-async def resume_audio(ctx):
-    if ctx.voice_client and ctx.voice_client.is_paused():
-        ctx.voice_client.resume()
-        await ctx.send("تم استئناف التشغيل ▶️")
-    else:
-        await ctx.send("البوت ليس في حالة إيقاف مؤقت.")
-
-@bot.command(name="خ")
-async def leave_channel(ctx):
+@bot.command(name='stop', help='يوقف البوت ويطلعه من الروم')
+async def stop(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
-        await ctx.send("تم الخروج من القناة الصوتية 👋")
+        await ctx.send('تم إيقاف الصوت والخروج من الروم بنجاح! 🛑')
     else:
-        await ctx.send("البوت أساساً مو في أي قناة صوتية.")
+        await ctx.send('البوت أصلاً ماهو في روم صوتي!')
 
-if __name__ == "__main__":
-    keep_alive()
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        print("خطأ: لم يتم العثور على التوكن في متغيرات البيئة!")
+if __name__ == '__main__':
+    # تشغيل سيرفر الفلاسك في خلفية البوت
+    t = threading.Thread(target=run_flask)
+    t.start()
+    
+    # تشغيل البوت باستخدام التوكن من متغيرات البيئة
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    if TOKEN:
+        bot.run(TOKEN)
     else:
-        bot.run(token)
+        print("خطأ: لم يتم العثور على متغير البيئة DISCORD_TOKEN!")
