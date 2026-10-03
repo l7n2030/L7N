@@ -4,10 +4,9 @@ import discord
 from discord.ext import commands
 import yt_dlp
 import flask
-import imageio_ffmpeg
+import davey  # استيراد مكتبة davey كبديل آمن
 
-# إعداد تطبيق فلاسك عشان يظل البوت شغال 24 ساعة على رندر
-app = FlaskAppWrapper = flask.Flask(__name__)
+app = flask.Flask(__name__)
 
 @app.route('/')
 def home():
@@ -16,22 +15,15 @@ def home():
 def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
-# إعدادات ديسكورد بوت
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# تحديد مسار ffmpeg المضمن تلقائياً لتجنب مشاكل رندر
-FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
-
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': 'True',
-}
-
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
+    'extract_flat': False,
+    'skip_download': True,
 }
 
 @bot.event
@@ -56,10 +48,10 @@ async def play(ctx, *, url):
         try:
             with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
-                url2 = info['url']
+                audio_url = info.get('url') or info['entries'][0]['url']
             
-            # استخدام المسار الصحيح المضمن لـ ffmpeg
-            source = discord.FFmpegPCMAudio(url2, executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+            # استخدام davey لتشغيل الصوت مباشرة بدون الحاجة لبرنامج ffmpeg الخارجي
+            source = await davey.AudioSource.from_url(audio_url)
             
             ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
             await ctx.send(f'🎵 جاري تشغيل: **{info.get("title", "الصوت")}**')
@@ -75,13 +67,9 @@ async def stop(ctx):
         await ctx.send('البوت أصلاً ماهو في روم صوتي!')
 
 if __name__ == '__main__':
-    # تشغيل سيرفر الفلاسك في خلفية البوت
     t = threading.Thread(target=run_flask)
     t.start()
     
-    # تشغيل البوت باستخدام التوكن من متغيرات البيئة
     TOKEN = os.getenv('DISCORD_TOKEN')
     if TOKEN:
         bot.run(TOKEN)
-    else:
-        print("خطأ: لم يتم العثور على متغير البيئة DISCORD_TOKEN!")
