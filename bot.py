@@ -12,10 +12,10 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# تحديد مسار ملف الكوكيز تلقائياً من نفس المجلد
+# تحديد مسار ملف الكوكيز تلقائياً
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 
-# إعدادات yt-dlp المحدثة لتجاوز حظر يوتيوب باستخدام الكوكيز
+# إعدادات yt-dlp الشاملة لدعم كل المنصات وتجاوز القيود
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'extractaudio': True,
@@ -28,10 +28,10 @@ ytdl_format_options = {
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
-    'default_search': 'auto',
+    'default_search': 'auto',  # يدعم البحث النصي المباشر أو الروابط لكل المنصات
     'source_address': '0.0.0.0',
     'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
-    'cookiefile': cookies_path,  # ربط ملف الكوكيز بمساره الصحيح
+    'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
 }
 
 ffmpeg_options = {
@@ -45,12 +45,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
         self.data = data
-        self.title = data.get('title')
-        self.url = data.get('url')
+        self.title = data.get('title', 'مقطع صوتي')
+        self.url = data.get('url', '')
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
         loop = loop or asyncio.get_event_loop()
+        # استخراج البيانات من أي منصة تدعمها yt-dlp تلقائياً
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
         if 'entries' in data:
             data = data['entries'][0]
@@ -74,7 +75,7 @@ async def come_channel(ctx):
     else:
         await ctx.send("يا أبو محمد، لازم تكون داخل قناة صوتية أولاً!")
 
-# أمر تشغيل الصوت (مثال: !ش [اسم الأغنية أو الرابط])
+# أمر تشغيل الصوت الشامل (يوتيوب، ساوند كلاود، وكل المنصات)
 @bot.command(name="ش")
 async def play_audio(ctx, *, query):
     if not ctx.voice_client:
@@ -91,9 +92,9 @@ async def play_audio(ctx, *, query):
         try:
             player = await YTDLSource.from_url(query, loop=bot.loop, stream=True)
             ctx.voice_client.play(player, after=lambda e: print(f'خطأ في التشغيل: {e}') if e else None)
-            await ctx.send(f"جار الآن تشغيل: **{player.title}** 🎶")
+            await ctx.send(f"جار الآن تشغيل من المنصة المدعومة: **{player.title}** 🎶")
         except Exception as e:
-            await ctx.send(f"صار خطأ أثناء البحث أو التشغيل: {e}")
+            await ctx.send(f"صار خطأ أثناء جلب الرابط أو التشغيل: {e}")
 
 # أمر الإيقاف المؤقت
 @bot.command(name="وقف")
@@ -120,12 +121,10 @@ async def leave_channel(ctx):
         await ctx.voice_client.disconnect()
         await ctx.send("تم الخروج من القناة الصوتية 👋")
     else:
-        await ctx.send("البوت أساساً موفي أي قناة صوتية.")
+        await ctx.send("البوت أساساً مو في أي قناة صوتية.")
 
 if __name__ == "__main__":
-    # تشغيل سيرفر الحفاظ على البوت شغال (Flask)
     keep_alive()
-    
     token = os.getenv("DISCORD_TOKEN")
     if not token:
         print("خطأ: لم يتم العثور على التوكن في متغيرات البيئة!")
