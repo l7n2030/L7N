@@ -27,6 +27,7 @@ ytdl_format_options = {
     'source_address': '0.0.0.0',
     # إعدادات إضافية لتجاوز فحص الروبوت
     'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+    'cookiefile': 'cookies.txt',  # ملف الكوكيز لتجاوز حظر يوتيوب نهائياً
 }
 
 ffmpeg_options = {
