@@ -104,4 +104,4 @@ async def leave_short(ctx):
     else:
         await ctx.send("البوت ليس في أي قناة صوتية")
 
-bot.run('MTU1NTgzNyzMjc3ODKxMzgzwMg.GAIRpM.gHuPeBoBgNhUnDnzUz_6UUdByZpM7rpW5WCAA')
+bot.run('MTU1NTgzNzY5Mjc3ODkxMzgzMg.GpGfpp.-Ve1DDM-BtXPMguVzIbJY_SshBLkrIutbvylK0')
