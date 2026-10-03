@@ -15,9 +15,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
-# إعدادات مبسطة ومباشرة لسحب رابط الصوت النقي وتجاوز الأخطاء
+# إعدادات مخصصة لضمان الاستقرار وتجاوز الحظر
 ytdl_format_options = {
-    'format': 'bestaudio',
+    'format': 'bestaudio/best',
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
@@ -27,12 +27,6 @@ ytdl_format_options = {
     'default_search': 'auto',
     'source_address': '0.0.0.0',
     'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
-}
-
-ffmpeg_options = {
-    'executable': ffmpeg_path,
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn -b:a 128k',
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
@@ -51,9 +45,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
         if 'entries' in data:
             data = data['entries'][0]
         
-        # استخراج رابط البث المباشر للصوت مباشرة
         filename = data.get('url')
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        
+        # خيارات خفيفة ومستقرة تماماً للـ ffmpeg لتجنب خطأ الانهيار -11
+        ffmpeg_options = {
+            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+            'options': '-vn'
+        }
+        
+        return cls(discord.FFmpegPCMAudio(filename, executable=ffmpeg_path, **ffmpeg_options), data=data)
 
 @bot.event
 async def on_ready():
