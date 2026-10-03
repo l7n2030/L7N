@@ -5,21 +5,17 @@ import yt_dlp
 import asyncio
 from keep_alive import keep_alive
 
-# إعدادات البوت والصلاحيات
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# تحديد مسار ملف الكوكيز تلقائياً
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 
-# إعدادات yt-dlp الشاملة لدعم كل المنصات وتجاوز القيود
+# إعدادات معدلة ومضبوطة لتجاوز خطأ الصيغة المطلوبة
 ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'extractaudio': True,
-    'audioformat': 'mp3',
+    'format': 'ba/b',  # صيغة مخصصة لجلب أفضل صوت متاح مباشرة بدون أخطاء
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
@@ -28,7 +24,7 @@ ytdl_format_options = {
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
-    'default_search': 'auto',  # يدعم البحث النصي المباشر أو الروابط لكل المنصات
+    'default_search': 'auto',
     'source_address': '0.0.0.0',
     'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
@@ -51,7 +47,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
         loop = loop or asyncio.get_event_loop()
-        # استخراج البيانات من أي منصة تدعمها yt-dlp تلقائياً
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
         if 'entries' in data:
             data = data['entries'][0]
@@ -62,7 +57,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
 async def on_ready():
     print(f'تم تسجيل الدخول بنجاح باسم: {bot.user.name}')
 
-# أمر استدعاء البوت للقناة الصوتية
 @bot.command(name="come")
 async def come_channel(ctx):
     if ctx.author.voice:
@@ -75,7 +69,6 @@ async def come_channel(ctx):
     else:
         await ctx.send("يا أبو محمد، لازم تكون داخل قناة صوتية أولاً!")
 
-# أمر تشغيل الصوت الشامل (يوتيوب، ساوند كلاود، وكل المنصات)
 @bot.command(name="ش")
 async def play_audio(ctx, *, query):
     if not ctx.voice_client:
@@ -92,11 +85,10 @@ async def play_audio(ctx, *, query):
         try:
             player = await YTDLSource.from_url(query, loop=bot.loop, stream=True)
             ctx.voice_client.play(player, after=lambda e: print(f'خطأ في التشغيل: {e}') if e else None)
-            await ctx.send(f"جار الآن تشغيل من المنصة المدعومة: **{player.title}** 🎶")
+            await ctx.send(f"جار الآن تشغيل: **{player.title}** 🎶")
         except Exception as e:
             await ctx.send(f"صار خطأ أثناء جلب الرابط أو التشغيل: {e}")
 
-# أمر الإيقاف المؤقت
 @bot.command(name="وقف")
 async def pause_audio(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
@@ -105,7 +97,6 @@ async def pause_audio(ctx):
     else:
         await ctx.send("مافي شي شغال حالياً عشان أوقفه.")
 
-# أمر الاستئناف
 @bot.command(name="كمل")
 async def resume_audio(ctx):
     if ctx.voice_client and ctx.voice_client.is_paused():
@@ -114,7 +105,6 @@ async def resume_audio(ctx):
     else:
         await ctx.send("البوت ليس في حالة إيقاف مؤقت.")
 
-# أمر إخراج البوت من القناة
 @bot.command(name="خ")
 async def leave_channel(ctx):
     if ctx.voice_client:
