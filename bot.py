@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import yt_dlp
 import asyncio
+import imageio_ffmpeg
 from keep_alive import keep_alive
 
 intents = discord.Intents.default()
@@ -12,10 +13,11 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
-# إعدادات متطورة لتجاوز حظر صيغ يوتيوب عبر إجبار المشغل على محاكاة متصفح ويب حقيقي
+# إعدادات yt-dlp المتوافقة والمستقرة تماماً
 ytdl_format_options = {
-    'format': 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
+    'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
@@ -26,11 +28,12 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'extractor_args': {'youtube': {'player_client': ['web', 'ios', 'android']}},
+    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
 }
 
 ffmpeg_options = {
+    'executable': ffmpeg_path,
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn',
 }
