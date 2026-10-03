@@ -12,7 +12,10 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# إعدادات yt-dlp المتوافقة مع التحديثات الأخيرة وتجاوز حظر يوتيوب
+# تحديد مسار ملف الكوكيز تلقائياً من نفس المجلد
+cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+
+# إعدادات yt-dlp المحدثة لتجاوز حظر يوتيوب باستخدام الكوكيز
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'extractaudio': True,
@@ -28,7 +31,7 @@ ytdl_format_options = {
     'default_search': 'auto',
     'source_address': '0.0.0.0',
     'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
-    'cookiefile': 'cookies.txt', # ملف الكوكيز الخاص بحسابك لتجاوز حظر يوتيوب
+    'cookiefile': cookies_path,  # ربط ملف الكوكيز بمساره الصحيح
 }
 
 ffmpeg_options = {
