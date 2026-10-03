@@ -15,11 +15,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
-# إعدادات yt-dlp المتوافقة والمستقرة تماماً
+# إعدادات مبسطة ومباشرة لسحب رابط الصوت النقي وتجاوز الأخطاء
 ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-    'restrictfilenames': True,
+    'format': 'bestaudio',
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
@@ -28,14 +26,13 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
 }
 
 ffmpeg_options = {
     'executable': ffmpeg_path,
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
+    'options': '-vn -b:a 128k',
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
@@ -53,7 +50,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
         if 'entries' in data:
             data = data['entries'][0]
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
+        
+        # استخراج رابط البث المباشر للصوت مباشرة
+        filename = data.get('url')
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 @bot.event
