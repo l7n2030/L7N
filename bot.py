@@ -13,9 +13,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 
-# إعدادات yt-dlp المتوافقة والمستقرة تماماً مع كل مقاطع يوتيوب
+# إعدادات متطورة لتجاوز حظر صيغ يوتيوب عبر إجبار المشغل على محاكاة متصفح ويب حقيقي
 ytdl_format_options = {
-    'format': 'bestaudio',
+    'format': 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
@@ -26,7 +26,7 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+    'extractor_args': {'youtube': {'player_client': ['web', 'ios', 'android']}},
     'cookiefile': cookies_path if os.path.exists(cookies_path) else None,
 }
 
@@ -69,16 +69,11 @@ async def come_channel(ctx):
     else:
         await ctx.send("يا أبو محمد، لازم تكون داخل قناة صوتية أولاً!")
 
-# أمر التشغيل (يدعم الرابط حتى لو لزقته في الأمر بدون مسافة)
 @bot.command(name="ش")
 async def play_audio(ctx, *, query=None):
     if not query:
         await ctx.send("يا أبو محمد، اكتب اسم الأغنية أو حط الرابط بعد الأمر (مثال: `!ش اسم الأغنية`)")
         return
-
-    # إزالة أي التواء لو كان الرابط لاصق في الحرف
-    if query.startswith("http"):
-        pass
 
     if not ctx.voice_client:
         if ctx.author.voice:
