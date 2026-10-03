@@ -10,7 +10,7 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# إعدادات yt-dlp للصوت
+# إعدادات yt-dlp المحدثة لتجاوز حظر يوتيوب والتحديثات
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'extractaudio': True,
@@ -25,6 +25,8 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
+    # إعدادات إضافية لتجاوز فحص الروبوت
+    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
 }
 
 ffmpeg_options = {
