@@ -10,9 +10,9 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# إعدادات yt-dlp المحدثة لتجاوز حظر يوتيوب والتحديثات
+# إعدادات yt-dlp المحدثة لتجاوز حظر يوتيوب والصيغ
 ytdl_format_options = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio',
     'extractaudio': True,
     'audioformat': 'mp3',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -66,7 +66,7 @@ async def come_channel(ctx):
             await ctx.voice_client.move_to(channel)
         else:
             await channel.connect()
-        await ctx.send("تم الدخول للقناة الصوتية بنجاح! 🎙️")
+        await ctx.send("تم الدخول للقناة الصوتية بنجاح! 🎙️️")
     else:
         await ctx.send("يا أبو محمد، لازم تدخل قناة صوتية أول شيء!")
 
