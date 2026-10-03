@@ -104,4 +104,9 @@ async def leave_short(ctx):
     else:
         await ctx.send("البوت ليس في أي قناة صوتية")
 
-bot.run('MTU1NTgzNzY5Mjc3ODkxMzgzMg.GpGfpp.-Ve1DDM-BtXPMguVzIbJY_SshBLkrIutbvylK0')
+if __name__ == "__main__":
+    token = os.getenv("DISCORD_TOKEN")
+    if not token:
+        print("خطأ: لم يتم العثور على التوكن في متغيرات البيئة!")
+    else:
+        bot.run(token)
