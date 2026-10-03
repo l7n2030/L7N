@@ -4,7 +4,6 @@ import discord
 from discord.ext import commands
 import yt_dlp
 import flask
-import davey  # استيراد مكتبة davey كبديل آمن
 
 app = flask.Flask(__name__)
 
@@ -22,8 +21,11 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': 'True',
-    'extract_flat': False,
-    'skip_download': True,
+}
+
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
 }
 
 @bot.event
@@ -50,10 +52,12 @@ async def play(ctx, *, url):
                 info = ydl.extract_info(url, download=False)
                 audio_url = info.get('url') or info['entries'][0]['url']
             
-            # استخدام davey لتشغيل الصوت مباشرة بدون الحاجة لبرنامج ffmpeg الخارجي
-            source = await davey.AudioSource.from_url(audio_url)
-            
+            if ctx.voice_client.is_playing():
+                ctx.voice_client.stop()
+
+            source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
             ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+            
             await ctx.send(f'🎵 جاري تشغيل: **{info.get("title", "الصوت")}**')
         except Exception as e:
             await ctx.send(f'صار فيه خطأ أثناء تشغيل المقطع: `{e}`')
